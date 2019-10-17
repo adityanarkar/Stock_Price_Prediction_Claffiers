@@ -1,9 +1,9 @@
+import json
 import os
-
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFECV
-from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
+from sklearn.model_selection import TimeSeriesSplit, GridSearchCV, RandomizedSearchCV
 
 import definitions
 from data_prep import data_preparation as dp
@@ -33,13 +33,12 @@ def get_splits(X):
 def get_params_rf(estimator_start, estimator_stop, depth_start, depth_stop):
     estimator_options = [x for x in range(estimator_start, estimator_stop, 10)]
     depth_options = [x for x in range(depth_start, depth_stop, 10)]
-    parameters = dict(estimator__n_estimators=estimator_options, estimator__max_depth=depth_options)
+    parameters = dict(n_estimators=estimator_options, max_depth=depth_options)
     return parameters
 
 
 def testRandomForests(STOCK, future_day, data_for_algos, estimator_start, estimator_stop,
-                      depth_start, depth_stop,
-                      initial_no_of_features, max_features):
+                      depth_start, depth_stop, actual_data_to_predict):
     result = ""
     train_size = int(data_for_algos.shape[0] * 0.9)
     print(train_size)
@@ -50,16 +49,17 @@ def testRandomForests(STOCK, future_day, data_for_algos, estimator_start, estima
     splits = get_splits(X)
     print(splits)
     estimator = RandomForestClassifier()
-    selector = RFECV(estimator, step=1, cv=TimeSeriesSplit(n_splits=5), scoring='accuracy')
-    clf = GridSearchCV(selector, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), scoring='accuracy')
+    # selector = RFECV(estimator, step=1, cv=TimeSeriesSplit(n_splits=5), scoring='accuracy')
+    clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1, scoring='accuracy')
     print(X.shape)
     print(y.shape)
     clf.fit(X[:train_size], y[:train_size])
-    print(clf.best_estimator_.estimator_)
-    print(clf.best_estimator_.grid_scores_)
-    print(clf.best_estimator_.ranking_)
+    # print(clf.best_estimator_.estimator_)
+    # print(clf.best_estimator_.grid_scores_)
+    # print(clf.best_estimator_.ranking_)
     print(clf.best_params_)
     print(clf.score(X[train_size:], y[train_size:]))
+    print(clf.predict(actual_data_to_predict))
     return result
 
 
@@ -87,16 +87,16 @@ def get_prepared_data(STOCK_FILE, window_size, feature_window_size, discretize):
                                                      discretize=discretize).data_frame_with_features()
     # df.drop(columns=['open', 'high', 'low', 'close'], inplace=True)
     data_for_algos = df.to_numpy()
-    return data_for_algos, actual_data_to_predict
+    return data_for_algos, actual_data_to_predict.to_numpy()
 
 
 def write_result_to_file(lock, RESULT_FILE, result):
-    lock.acquire()
+    # lock.acquire()
     try:
         open(RESULT_FILE, 'a').write(result)
     except:
         print("Error while writing to a file.")
-    lock.release()
+    # lock.release()
 
 
 def make_missing_dirs(path):
@@ -141,15 +141,60 @@ def runExperiment(lock, STOCK_FILE, RESULT_FILE, algos, future_day_start, future
     write_result_to_file(lock, RESULT_FILE, result)
 
 
-def collect_data(no_of_symbols: int, filepath: str):
-    dc.sample_data(no_of_symbols, filepath)
-    dc.collect_data(filepath)
+def get_config_from_dict(dictionary):
+    RESULT_FILE = dictionary["RESULT_FILE"]
+    COMPLETED_FILE = dictionary["COMPLETED_FILE"]
+    algos = dictionary["algos"]
+    future_day_start = dictionary["future_day_start"]
+    future_day_stop = dictionary["future_day_stop"]
+    estimator_start = dictionary["estimator_start"]
+    estimator_stop = dictionary["estimator_stop"]
+    depth_start = dictionary["depth_start"]
+    depth_stop = dictionary["depth_stop"]
+    initial_no_of_features = dictionary["initial_no_of_features"]
+    max_features = dictionary["max_features"]
+    feature_window_size = dictionary["feature_window_size"]
+    discretize = True if dictionary["discretize"] == 1 else False
+    C = dictionary["C"]
+
+    return RESULT_FILE, COMPLETED_FILE, algos, future_day_start, future_day_stop, estimator_start, \
+           estimator_stop, depth_start, depth_stop, initial_no_of_features, max_features, \
+           feature_window_size, discretize, C
 
 
-def get_requested_tickrs(filepath):
-    result = []
-    with open(filepath) as f:
-        for line in f.readlines():
-            if not line.startswith("#"):
-                result.append(line.replace("\n", ""))
-    return result
+def pre_run_tasks(RESULT_FILE, COMPLETED_FILE):
+    make_missing_dirs(RESULT_FILE)
+    make_missing_dirs(COMPLETED_FILE)
+    add_headers(RESULT_FILE)
+
+
+file = open('configs/config_all_disc.json')
+configs = json.load(file)
+
+for dictionary in configs:
+    RESULT_FILE, COMPLETED_FILE, algos, future_day_start, future_day_stop, estimator_start, \
+    estimator_stop, depth_start, depth_stop, initial_no_of_features, max_features, \
+    feature_window_size, discretize, C = get_config_from_dict(dictionary)
+    pre_run_tasks(RESULT_FILE, COMPLETED_FILE)
+
+    files = list(map(lambda x: x.replace("\n", ""), open('55stocks.txt', 'r').readlines()))
+    files.reverse()
+    print(files)
+    for filename in files:
+        STOCK = filename.split(".csv")[0]
+        result = ""
+        for future_day in range(future_day_start, future_day_stop, 10):
+            try:
+                data_for_algos, actual_data_to_predict = get_prepared_data(
+                    filename, future_day, feature_window_size, discretize)
+                # print(data_for_algos.shape[1])
+            except:
+                continue
+
+            if 'RF' in algos:
+                if __name__ == '__main__':
+                    result += testRandomForests(STOCK, future_day, data_for_algos, estimator_start,
+                                                estimator_stop,
+                                                depth_start, depth_stop, actual_data_to_predict)
+
+        write_result_to_file(0, RESULT_FILE, result)
