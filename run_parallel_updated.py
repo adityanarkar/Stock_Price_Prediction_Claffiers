@@ -1,15 +1,16 @@
+import json
+import main_fold
 import multiprocessing
-import os, random, json, main_updated, main_fold
 from multiprocessing import Process, Lock
 
-file = open('configs/config_all_features_all_algos.json')
+file = open('configs/config_all_disc.json')
 configs = json.load(file)
 
 
 def pre_run_tasks(RESULT_FILE, COMPLETED_FILE):
-    main_updated.make_missing_dirs(RESULT_FILE)
-    main_updated.make_missing_dirs(COMPLETED_FILE)
-    main_updated.add_headers(RESULT_FILE)
+    main_fold.make_missing_dirs(RESULT_FILE)
+    main_fold.make_missing_dirs(COMPLETED_FILE)
+    main_fold.add_headers(RESULT_FILE)
 
 
 def get_config_from_dict(dictionary):
@@ -58,6 +59,7 @@ if __name__ == '__main__':
                                 feature_window_size,
                                 discretize, C))
                 p.start()
+                p.join()
                 processes.append({"process": p, "stock": filename})
                 if len(processes) % max_cpus == 0:
                     processes[0]["process"].join()
