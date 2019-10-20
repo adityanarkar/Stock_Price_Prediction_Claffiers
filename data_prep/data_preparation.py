@@ -1,5 +1,6 @@
 import pandas as pd
 from data_prep import features_disc as features
+from sklearn.preprocessing import MinMaxScaler
 
 
 class data_preparation(object):
@@ -59,25 +60,36 @@ class data_preparation(object):
         features.RSI(df, self.discretize)
         features.williamsR(df, 9, self.discretize)
         features.ADIndicator(df, self.discretize)
-        # features.diff_n_Months(df, 90)
-        # features.diff_current_lowest_low(df, 90)
-        # features.diff_current_highest_high(df, 90)
-        # features.standard_deviation(df, 90)
-        # features.skewness(df, 90)
-        # features.kurtosis(df, 90)
-        # features.entropy(df, 90)
-        # features.fourier_transform_min(df, 90)
-        # features.fourier_transform_max(df, 90)
-        # features.fourier_transform_mean(df, 90)
+        features.diff_n_Months(df, 90)
+        features.diff_current_lowest_low(df, 90)
+        features.diff_current_highest_high(df, 90)
+        features.standard_deviation(df, 90)
+        features.skewness(df, 90)
+        features.kurtosis(df, 90)
+        features.entropy(df, 90)
+        features.fourier_transform_min(df, 90)
+        features.fourier_transform_max(df, 90)
+        features.fourier_transform_mean(df, 90)
         features.CCI(df, 20, self.discretize)
         df.dropna(inplace=True)
 
-
         df['shifted_value'] = df['adjusted_close'].shift(-1 * self.window)
+        df = scale_data(df)
         data_to_predict = self.get_fresh_data_for_prediction(df)
-        # df = df.apply(lambda x: self.create_label(x), axis=1)
         self.create_label_profit_loss(df, self.window)
         df.dropna(inplace=True)
-        df.drop(columns=['shifted_value', 'dividend_amount', 'split_coefficient', 'open', 'high', 'low', 'close', 'adjusted_close', 'volume', '9-day-EMA', '12-day-EMA', '26-day-EMA'], inplace=True)
-        data_to_predict.drop(columns=['shifted_value', 'dividend_amount', 'split_coefficient', 'open', 'high', 'low', 'close', 'adjusted_close', 'volume', '9-day-EMA', '12-day-EMA', '26-day-EMA'], inplace=True)
+        df.drop(columns=['shifted_value', 'dividend_amount', 'split_coefficient', 'open', 'high', 'low', 'close',
+                         '9-day-EMA', '12-day-EMA', '26-day-EMA', 'TP', 'TPMA', 'MeanDeviation'], inplace=True)
+        data_to_predict.drop(
+            columns=['shifted_value', 'dividend_amount', 'split_coefficient', 'open', 'high', 'low', 'close',
+                     '9-day-EMA', '12-day-EMA', '26-day-EMA', 'TP', 'TPMA', 'MeanDeviation'], inplace=True)
         return df, data_to_predict
+
+
+def scale_data(df: pd.DataFrame):
+    df = df.copy()
+    mms = MinMaxScaler()
+    df[['diff_3_months', 'diff_LL', 'diff_HH', 'std', 'skew', 'kurtosis', 'entropy', 'fft_min', 'fft_max',
+        'fft_mean']] = mms.fit_transform(df[['diff_3_months', 'diff_LL', 'diff_HH', 'std', 'skew', 'kurtosis',
+                                             'entropy', 'fft_min', 'fft_max', 'fft_mean']])
+    return df

@@ -14,7 +14,7 @@
     "algos": [
       "ZR","SVM","RF","KNN"
     ],
-    //"RESULT_FILE": "Results/Fold/All/Only_Discretize/Profit_loss/result2.csv",
-    //"COMPLETED_FILE": "Results/Fold/All/Only_Discretize/Profit_loss/completed.txt"
+    "RESULT_FILE": "Results/Fold/All/FS/Profit_loss/result.csv",
+    "COMPLETED_FILE": "Results/Fold/All/FS/Profit_loss/completed.txt"
   }
 ]
