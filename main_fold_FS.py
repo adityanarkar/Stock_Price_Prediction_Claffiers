@@ -5,8 +5,8 @@ from threading import Lock
 import numpy as np
 from sklearn import svm, dummy
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import RFECV, mutual_info_classif
-from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.feature_selection import RFECV, mutual_info_classif, RFE
+from sklearn.feature_selection import SelectKBest
 from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -47,11 +47,19 @@ def testRandomForests(STOCK, future_day, actual_data_to_predict, estimator_start
                                               y, test_size)
 
 
+def get_rfe_rf_selectors(max_features):
+    estimator = RandomForestClassifier()
+    list_of_selectors = []
+    for i in range(1, max_features):
+        list_of_selectors.append(RFE(estimator, n_features_to_select=i))
+    return list_of_selectors
+
+
 def testSVM(STOCK, future_day, actual_data_to_predict, C, data_for_algos):
     test_size = get_test_size(data_for_algos, future_day)
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
-    parameters = {'estimator__kernel': ('linear', 'poly', 'rbf'), 'estimator__C': C}
+    parameters = {'estimator__kernel': ('linear', 'poly', 'rbf'), 'estimator__C': C, 'estimator__degree': [1, 2, 3, 4]}
     estimator = svm.SVC(gamma="scale")
     selector = RFECV(estimator, step=1, cv=TimeSeriesSplit(n_splits=3), scoring='accuracy')
     return perform_grid_search_and_get_result(STOCK, future_day, actual_data_to_predict, 'SVM', selector, parameters, X,
@@ -94,7 +102,7 @@ def perform_grid_search_and_get_result_for_knn(STOCK, future_day, actual_data_to
     max_score = 0
     model_val_score = -1
     no_of_features = -1
-    for i in range(22, actual_data_to_predict.shape[1] + 1):
+    for i in range(1, actual_data_to_predict.shape[1] + 1):
         print(i)
         X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X, y)
         clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1,
@@ -119,6 +127,7 @@ def perform_grid_search_and_get_result_for_knn(STOCK, future_day, actual_data_to
 
 def perform_grid_search_and_get_result(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters, X, y,
                                        test_size):
+    print("GRID")
     clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1, scoring='accuracy')
     try:
         clf.fit(X[:-test_size], y[:-test_size])
@@ -142,20 +151,21 @@ def get_rf_result(STOCK, clf, algo, model_val_score, our_score, future_day, actu
 
 def get_svm_result(STOCK, clf, algo, model_val_score, our_score, future_day, actual_data_to_predict):
     print(clf.predict(actual_data_to_predict))
-    kernel = clf.best_estimator_.kernel
-    c_val = clf.best_estimator_.C
+    kernel = clf.best_params_['estimator__kernel']
+    c_val = clf.best_params_['estimator__C']
     n_features = clf.best_estimator_.n_features_
     if kernel == 'linear' or kernel == 'rbf':
         return result_in_csv(STOCK, algo, Future_day=future_day, C=c_val, Distance_function=kernel,
                              Our_test_score=our_score, Model_Score=model_val_score, No_of_features=n_features)
     elif kernel == 'poly':
-        degree = clf.best_estimator_.degree
+        degree = clf.best_params_['estimator__degree']
         return result_in_csv(STOCK, algo, Future_day=future_day, C=c_val, Distance_function=kernel,
                              Our_test_score=our_score, Model_Score=model_val_score, degree=degree,
                              No_of_features=n_features)
 
 
-def get_knn_result(STOCK, clf, algo, model_val_score, our_score, future_day, actual_data_to_predict, no_of_features, X, y):
+def get_knn_result(STOCK, clf, algo, model_val_score, our_score, future_day, actual_data_to_predict, no_of_features, X,
+                   y):
     print(f"No of features {no_of_features}")
     selector = SelectKBest(mutual_info_classif, k=no_of_features)
     selector.fit(X, y)
@@ -169,7 +179,8 @@ def get_knn_result(STOCK, clf, algo, model_val_score, our_score, future_day, act
 
 
 def get_rf_clf_params(clf):
-    return clf.best_estimator_.max_depth, clf.best_estimator_.n_estimators, clf.best_estimator_.n_features_
+    return clf.best_params_['estimator__max_depth'], clf.best_params_[
+        'estimator__n_estimators'], clf.best_estimator_.n_features_
 
 
 def get_prepared_data(STOCK_FILE, window_size, feature_window_size, discretize):

@@ -93,3 +93,4 @@ def scale_data(df: pd.DataFrame):
         'fft_mean']] = mms.fit_transform(df[['diff_3_months', 'diff_LL', 'diff_HH', 'std', 'skew', 'kurtosis',
                                              'entropy', 'fft_min', 'fft_max', 'fft_mean']])
     return df
+
