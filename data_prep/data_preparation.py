@@ -89,8 +89,8 @@ class data_preparation(object):
 def scale_data(df: pd.DataFrame):
     df = df.copy()
     mms = MinMaxScaler()
-    df[['diff_3_months', 'diff_LL', 'diff_HH', 'std', 'skew', 'kurtosis', 'entropy', 'fft_min', 'fft_max',
-        'fft_mean']] = mms.fit_transform(df[['diff_3_months', 'diff_LL', 'diff_HH', 'std', 'skew', 'kurtosis',
+    df[['adjusted_close', 'volume', 'diff_3_months', 'diff_LL', 'diff_HH', 'std', 'skew', 'kurtosis', 'entropy', 'fft_min', 'fft_max',
+        'fft_mean']] = mms.fit_transform(df[['adjusted_close', 'volume', 'diff_3_months', 'diff_LL', 'diff_HH', 'std', 'skew', 'kurtosis',
                                              'entropy', 'fft_min', 'fft_max', 'fft_mean']])
     return df
 
