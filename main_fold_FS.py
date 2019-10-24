@@ -59,7 +59,7 @@ def testSVM(STOCK, future_day, actual_data_to_predict, C, data_for_algos):
     test_size = get_test_size(data_for_algos, future_day)
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
-    parameters = {'estimator__kernel': ['poly'], 'estimator__C': C, 'estimator__degree': [1]}
+    parameters = {'estimator__kernel': ['linear', 'poly', 'rbf'], 'estimator__C': C, 'estimator__degree': [1, 2, 3, 4]}
     estimator = svm.SVC()
     return perform_grid_search_and_get_result_for_svm(STOCK, future_day, actual_data_to_predict, 'SVM', estimator,
                                                       parameters, X,
