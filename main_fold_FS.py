@@ -61,9 +61,13 @@ def testSVM(STOCK, future_day, actual_data_to_predict, C, data_for_algos):
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
     parameters = {'kernel': ['linear', 'poly', 'rbf'], 'C': C, 'degree': [1, 2, 3, 4]}
     estimator = svm.SVC()
-    return perform_grid_search_and_get_result_for_svm(STOCK, future_day, actual_data_to_predict, 'SVM', estimator,
+    model_val_score, our_score, no_of_features, best_clf = perform_grid_search_and_get_result_for_knn_svm(STOCK, future_day, actual_data_to_predict, 'SVM', estimator,
                                                       parameters, X,
                                                       y, test_size)
+    if best_clf == 0:
+        result_in_csv(STOCK, 'SVM', Future_day=future_day)
+    return get_svm_result(STOCK, best_clf, 'SVM', model_val_score, our_score, future_day, actual_data_to_predict,
+                          no_of_features, X, y)
 
 
 def testKNN(STOCK, future_day, actual_data_to_predict, data_for_algos):
@@ -73,9 +77,13 @@ def testKNN(STOCK, future_day, actual_data_to_predict, data_for_algos):
     parameters = {'n_neighbors': [3],
                   'metric': ['euclidean', 'manhattan', 'chebyshev', 'hamming', 'canberra', 'braycurtis']}
     estimator = KNeighborsClassifier()
-    return perform_grid_search_and_get_result_for_knn(STOCK, future_day, actual_data_to_predict, 'KNN', estimator,
+    model_val_score, our_score, no_of_features, best_clf = perform_grid_search_and_get_result_for_knn_svm(STOCK, future_day, actual_data_to_predict, 'KNN', estimator,
                                                       parameters,
                                                       X, y, test_size)
+    if best_clf == 0:
+        result_in_csv(STOCK, 'KNN', Future_day=future_day)
+    return get_knn_result(STOCK, best_clf, 'KNN', model_val_score, our_score, future_day, actual_data_to_predict,
+                          no_of_features, X, y)
 
 
 def testZeroHour(STOCK, future_day, data_for_algos):
@@ -95,20 +103,24 @@ def get_test_size(data_for_algos, future_day):
     return min(int(data_for_algos.shape[0] * 0.1), future_day)
 
 
-def perform_grid_search_and_get_result_for_knn(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters,
+def perform_grid_search_and_get_result_for_knn_svm(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters,
                                                X, y,
                                                test_size):
     best_clf = 0
     max_score = 0
     model_val_score = -1
     no_of_features = -1
+    X_train = X[:-test_size]
+    y_train = y[:-test_size]
+    X_test = X[-test_size:]
+    y_test = y[-test_size:]
     for i in range(10, actual_data_to_predict.shape[1] + 1):
         print(i)
-        X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X, y)
+        X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X_train, y_train)
         clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1,
                            scoring='accuracy')
         # try:
-        clf.fit(X_new[:-test_size], y[:-test_size])
+        clf.fit(X_new, y_train)
         # except:
             # continue
         model_val_score = clf.best_score_
@@ -117,42 +129,44 @@ def perform_grid_search_and_get_result_for_knn(STOCK, future_day, actual_data_to
             max_score = model_val_score
             no_of_features = i
     if best_clf == 0:
-        return result_in_csv(STOCK, algo, Future_day=future_day)
+        return 0, 0, 0, 0
     selector = SelectKBest(mutual_info_classif, k=no_of_features)
-    X_new = selector.fit_transform(X, y)
-    our_score = best_clf.score(X_new[-test_size:], y[-test_size:])
-    return get_knn_result(STOCK, best_clf, algo, model_val_score, our_score, future_day, actual_data_to_predict,
-                          no_of_features, X, y)
+    X_new = selector.fit_transform(X_train, y_train)
+    X_test = selector.transform(X_test)
+    our_score = best_clf.score(X_test, y_test)
+    # return get_knn_result(STOCK, best_clf, algo, model_val_score, our_score, future_day, actual_data_to_predict,
+    #                       no_of_features, X, y)
+    return model_val_score, our_score, no_of_features, best_clf
 
 
-def perform_grid_search_and_get_result_for_svm(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters,
-                                               X, y,
-                                               test_size):
-    best_clf = 0
-    max_score = 0
-    model_val_score = -1
-    no_of_features = -1
-    for i in range(10, actual_data_to_predict.shape[1] + 1):
-        print(i)
-        X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X, y)
-        clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1,
-                           scoring='accuracy')
-        # try:
-        clf.fit(X_new[:-test_size], y[:-test_size])
-        # except:
-            # continue
-        model_val_score = clf.best_score_
-        if model_val_score > max_score:
-            best_clf = clf
-            max_score = model_val_score
-            no_of_features = i
-    if best_clf == 0:
-        return result_in_csv(STOCK, algo, Future_day=future_day)
-    selector = SelectKBest(mutual_info_classif, k=no_of_features)
-    X_new = selector.fit_transform(X, y)
-    our_score = best_clf.score(X_new[-test_size:], y[-test_size:])
-    return get_svm_result(STOCK, best_clf, algo, model_val_score, our_score, future_day, actual_data_to_predict,
-                          no_of_features, X, y)
+# def perform_grid_search_and_get_result_for_svm(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters,
+#                                                X, y,
+#                                                test_size):
+#     best_clf = 0
+#     max_score = 0
+#     model_val_score = -1
+#     no_of_features = -1
+#     for i in range(10, actual_data_to_predict.shape[1] + 1):
+#         print(i)
+#         X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X, y)
+#         clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1,
+#                            scoring='accuracy')
+#         # try:
+#         clf.fit(X_new[:-test_size], y[:-test_size])
+#         # except:
+#             # continue
+#         model_val_score = clf.best_score_
+#         if model_val_score > max_score:
+#             best_clf = clf
+#             max_score = model_val_score
+#             no_of_features = i
+#     if best_clf == 0:
+#         return result_in_csv(STOCK, algo, Future_day=future_day)
+#     selector = SelectKBest(mutual_info_classif, k=no_of_features)
+#     X_new = selector.fit_transform(X, y)
+#     our_score = best_clf.score(X_new[-test_size:], y[-test_size:])
+#     return get_svm_result(STOCK, best_clf, algo, model_val_score, our_score, future_day, actual_data_to_predict,
+#                           no_of_features, X, y)
 
 
 def perform_grid_search_and_get_result(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters, X, y,
