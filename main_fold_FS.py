@@ -37,7 +37,7 @@ def get_params_rf(estimator_start, estimator_stop, depth_start, depth_stop):
 
 def testRandomForests(STOCK, future_day, actual_data_to_predict, estimator_start, estimator_stop,
                       depth_start, depth_stop, data_for_algos):
-    test_size = get_test_size(data_for_algos, future_day)
+    test_size = future_day
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
     parameters = get_params_rf(estimator_start, estimator_stop, depth_start, depth_stop)
@@ -56,7 +56,7 @@ def get_rfe_rf_selectors(max_features):
 
 
 def testSVM(STOCK, future_day, actual_data_to_predict, C, data_for_algos):
-    test_size = get_test_size(data_for_algos, future_day)
+    test_size = future_day
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
     parameters = {'kernel': ['linear', 'poly', 'rbf'], 'C': C, 'degree': [1, 2, 3, 4]}
@@ -71,7 +71,7 @@ def testSVM(STOCK, future_day, actual_data_to_predict, C, data_for_algos):
 
 
 def testKNN(STOCK, future_day, actual_data_to_predict, data_for_algos):
-    test_size = get_test_size(data_for_algos, future_day)
+    test_size = future_day
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
     parameters = {'n_neighbors': [3],
@@ -87,7 +87,7 @@ def testKNN(STOCK, future_day, actual_data_to_predict, data_for_algos):
 
 
 def testZeroHour(STOCK, future_day, data_for_algos):
-    test_size = get_test_size(data_for_algos, future_day)
+    test_size = future_day
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
     try:
@@ -202,7 +202,7 @@ def get_svm_result(STOCK, clf, algo, model_val_score, our_score, future_day, act
         return result_in_csv(STOCK, algo, Future_day=future_day, C=c_val, Distance_function=kernel,
                              Our_test_score=our_score, Model_Score=model_val_score, No_of_features=no_of_features)
     elif kernel == 'poly':
-        degree = clf.best_params_['estimator__degree']
+        degree = clf.best_estimator_.degree
         return result_in_csv(STOCK, algo, Future_day=future_day, C=c_val, Distance_function=kernel,
                              Our_test_score=our_score, Model_Score=model_val_score, degree=degree,
                              No_of_features=no_of_features)
