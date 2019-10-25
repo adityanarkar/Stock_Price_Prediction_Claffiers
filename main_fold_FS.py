@@ -119,10 +119,10 @@ def perform_grid_search_and_get_result_for_knn_svm(STOCK, future_day, actual_dat
         X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X_train, y_train)
         clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1,
                            scoring='accuracy')
-        # try:
-        clf.fit(X_new, y_train)
-        # except:
-            # continue
+        try:
+            clf.fit(X_new, y_train)
+        except:
+            continue
         model_val_score = clf.best_score_
         if model_val_score > max_score:
             best_clf = clf
@@ -172,10 +172,10 @@ def perform_grid_search_and_get_result_for_knn_svm(STOCK, future_day, actual_dat
 def perform_grid_search_and_get_result(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters, X, y,
                                        test_size):
     clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1, scoring='accuracy')
-    # try:
-    clf.fit(X[:-test_size], y[:-test_size])
-    # except:
-        # return result_in_csv(STOCK, algo, Future_day=future_day)
+    try:
+        clf.fit(X[:-test_size], y[:-test_size])
+    except:
+        return result_in_csv(STOCK, algo, Future_day=future_day)
     model_val_score = clf.best_score_
     our_score = clf.score(X[-test_size:], y[-test_size:])
     return get_rf_result(STOCK, clf, algo, model_val_score, our_score, future_day, actual_data_to_predict)
