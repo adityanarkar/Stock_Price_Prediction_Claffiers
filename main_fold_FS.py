@@ -59,7 +59,7 @@ def testSVM(STOCK, future_day, actual_data_to_predict, C, data_for_algos):
     test_size = get_test_size(data_for_algos, future_day)
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
-    parameters = {'estimator__kernel': ['linear', 'poly', 'rbf'], 'estimator__C': C, 'estimator__degree': [1, 2, 3, 4]}
+    parameters = {'kernel': ['linear', 'poly', 'rbf'], 'C': C, 'degree': [1, 2, 3, 4]}
     estimator = svm.SVC()
     return perform_grid_search_and_get_result_for_svm(STOCK, future_day, actual_data_to_predict, 'SVM', estimator,
                                                       parameters, X,
@@ -70,8 +70,8 @@ def testKNN(STOCK, future_day, actual_data_to_predict, data_for_algos):
     test_size = get_test_size(data_for_algos, future_day)
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
-    parameters = {'estimator__n_neighbors': [3, 5, 7, 9, 11],
-                  'estimator__metric': ['euclidean', 'manhattan', 'chebyshev', 'hamming', 'canberra', 'braycurtis']}
+    parameters = {'n_neighbors': [3],
+                  'metric': ['euclidean', 'manhattan', 'chebyshev', 'hamming', 'canberra', 'braycurtis']}
     estimator = KNeighborsClassifier()
     return perform_grid_search_and_get_result_for_knn(STOCK, future_day, actual_data_to_predict, 'KNN', estimator,
                                                       parameters,
@@ -107,10 +107,10 @@ def perform_grid_search_and_get_result_for_knn(STOCK, future_day, actual_data_to
         X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X, y)
         clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1,
                            scoring='accuracy')
-        try:
-            clf.fit(X_new[:-test_size], y[:-test_size])
-        except:
-            continue
+        # try:
+        clf.fit(X_new[:-test_size], y[:-test_size])
+        # except:
+            # continue
         model_val_score = clf.best_score_
         if model_val_score > max_score:
             best_clf = clf
@@ -137,10 +137,10 @@ def perform_grid_search_and_get_result_for_svm(STOCK, future_day, actual_data_to
         X_new = SelectKBest(mutual_info_classif, k=i).fit_transform(X, y)
         clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1,
                            scoring='accuracy')
-        try:
-            clf.fit(X_new[:-test_size], y[:-test_size])
-        except:
-            continue
+        # try:
+        clf.fit(X_new[:-test_size], y[:-test_size])
+        # except:
+            # continue
         model_val_score = clf.best_score_
         if model_val_score > max_score:
             best_clf = clf
@@ -158,10 +158,10 @@ def perform_grid_search_and_get_result_for_svm(STOCK, future_day, actual_data_to
 def perform_grid_search_and_get_result(STOCK, future_day, actual_data_to_predict, algo, estimator, parameters, X, y,
                                        test_size):
     clf = GridSearchCV(estimator, param_grid=parameters, cv=TimeSeriesSplit(n_splits=5), n_jobs=-1, scoring='accuracy')
-    try:
-        clf.fit(X[:-test_size], y[:-test_size])
-    except:
-        return result_in_csv(STOCK, algo, Future_day=future_day)
+    # try:
+    clf.fit(X[:-test_size], y[:-test_size])
+    # except:
+        # return result_in_csv(STOCK, algo, Future_day=future_day)
     model_val_score = clf.best_score_
     our_score = clf.score(X[-test_size:], y[-test_size:])
     return get_rf_result(STOCK, clf, algo, model_val_score, our_score, future_day, actual_data_to_predict)
@@ -182,17 +182,16 @@ def get_svm_result(STOCK, clf, algo, model_val_score, our_score, future_day, act
     selector.fit(X, y)
     actual_data_to_predict = selector.transform(actual_data_to_predict)
     print(clf.predict(actual_data_to_predict))
-    kernel = clf.best_params_['estimator__kernel']
-    c_val = clf.best_params_['estimator__C']
-    n_features = clf.best_estimator_.n_features_
+    kernel = clf.best_estimator_.kernel
+    c_val = clf.best_estimator_.C
     if kernel == 'linear' or kernel == 'rbf':
         return result_in_csv(STOCK, algo, Future_day=future_day, C=c_val, Distance_function=kernel,
-                             Our_test_score=our_score, Model_Score=model_val_score, No_of_features=n_features)
+                             Our_test_score=our_score, Model_Score=model_val_score, No_of_features=no_of_features)
     elif kernel == 'poly':
         degree = clf.best_params_['estimator__degree']
         return result_in_csv(STOCK, algo, Future_day=future_day, C=c_val, Distance_function=kernel,
                              Our_test_score=our_score, Model_Score=model_val_score, degree=degree,
-                             No_of_features=n_features)
+                             No_of_features=no_of_features)
 
 
 def get_knn_result(STOCK, clf, algo, model_val_score, our_score, future_day, actual_data_to_predict, no_of_features, X,
