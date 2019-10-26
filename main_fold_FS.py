@@ -74,7 +74,7 @@ def testKNN(STOCK, future_day, actual_data_to_predict, data_for_algos):
     test_size = future_day
     X = np.asarray(list(map(lambda row: row[:-1], data_for_algos)))
     y = np.asarray(list(map(lambda row: row[-1], data_for_algos)))
-    parameters = {'n_neighbors': [3],
+    parameters = {'n_neighbors': [3, 5, 7, 9 ,11],
                   'metric': ['euclidean', 'manhattan', 'chebyshev', 'hamming', 'canberra', 'braycurtis']}
     estimator = KNeighborsClassifier()
     model_val_score, our_score, no_of_features, best_clf = perform_grid_search_and_get_result_for_knn_svm(STOCK, future_day, actual_data_to_predict, 'KNN', estimator,

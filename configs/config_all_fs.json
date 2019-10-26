@@ -12,9 +12,9 @@
     "discretize": 1,
     "C": [0.5, 1, 5, 10, 100],
     "algos": [
-      "ZR","SVM","RF","KNN"
+      "KNN"
     ],
-    "RESULT_FILE": "Results/Fold/All/FS/Profit_loss/result.csv",
-    "COMPLETED_FILE": "Results/Fold/All/FS/Profit_loss/completed.txt"
+    "RESULT_FILE": "Results/Fold/All/FS/Profit_loss/result_knn.csv",
+    "COMPLETED_FILE": "Results/Fold/All/FS/Profit_loss/completed_knn.txt"
   }
 ]
